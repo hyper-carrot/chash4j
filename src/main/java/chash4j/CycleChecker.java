@@ -17,8 +17,6 @@ public class CycleChecker implements Checker {
 
     private final AtomicLong count = new AtomicLong();
 
-    private Future<String> checkFuture = null;
-
     private MyLogger logger = MyLoggerFactory.getLogger(this.getClass().getName());
 
     public CycleChecker() {
@@ -42,12 +40,12 @@ public class CycleChecker implements Checker {
         this.stopSign.set(false);
         this.count.set(0);
         final long intervalMs = this.intervalSeconds * 1000;
-        Callable<String> checkTask = new  Callable<String>() {
+        Runnable checkTask = new  Runnable() {
 
-            public String call() throws Exception {
+            public void run() {
                 String errorMsg = null;
                 while (true) {
-                    if (!stopSign.get()) {
+                    if (stopSign.get()) {
                         logger.info("The checker will be stop. (count=" + count.get() + ")");
                         break;
                     }
@@ -62,12 +60,11 @@ public class CycleChecker implements Checker {
                         logger.error(errorMsg);
                     }
                 }
-                return errorMsg;
             }
 
         };
-        ExecutorService executor = Executors.newFixedThreadPool(1);
-        this.checkFuture = executor.submit(checkTask);
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        executor.submit(checkTask);
         this.checkingTag.set(true);
         return true;
     }
