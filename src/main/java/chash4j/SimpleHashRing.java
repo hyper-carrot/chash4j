@@ -34,7 +34,7 @@ public final class SimpleHashRing implements HashRing {
     private MyLogger logger = MyLoggerFactory.getLogger(this.getClass().getName());
 
     public SimpleHashRing() {
-        initialize();
+        //
     }
 
     private void initialize() {
