@@ -6,8 +6,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-import java.util.Random;
-
 @RunWith(JUnit4.class)
 public class SimpleHashRingTest {
 
@@ -126,62 +124,4 @@ public class SimpleHashRingTest {
         }
     }
 
-    @Test
-    public void BenchmarkSimpleHashRing() {
-        boolean debugTag = false;
-        SimpleHashRing shr = HashRingSingleton.INSTANCE.getHashRing();
-        String failingMsg = null;
-        int maxCount = 500000;
-        long ns1 = 0;
-        long ns2 = 0;
-        StringBuilder benchmarkMsg = new StringBuilder();
-        try {
-            String key = null;
-            String target = null;
-            ns1 = System.nanoTime();
-            for (int i = 0; i < maxCount; i++) {
-                key = getRandomKey();
-                target = shr.getTarget(key);
-                assertNotNull(target);
-                if (debugTag) {
-                    System.out.printf("The target of key '%s' is %s. (%d)\n", key, target, i);
-                }
-            }
-            ns2 = System.nanoTime();
-            shr.destroy();
-            System.out.println("The hash ring is destroyed.");
-            if (shr.status() != HashRingStatus.DESTROYED) {
-                failingMsg = "The status '" + shr.status() + "' should '" + HashRingStatus.DESTROYED + "'. ";
-                System.err.println(failingMsg);
-                fail(failingMsg);
-            }
-            long totalCostNs = ns2 - ns1;
-            String totalUnit = "ns";
-            double totalCost = totalCostNs;
-            if ((totalCostNs / 1000) > 100) {
-                totalUnit = "μs";
-                totalCost = totalCostNs / 1000.0;
-            }
-            long eachCostNs = totalCostNs / maxCount;
-            System.out.printf("Total cost (%s): %f, Count: %d, Each cost (ns): %d.\n", totalUnit, totalCost, maxCount, eachCostNs);
-        } catch (Exception e) {
-            String errorMsg = "Error: " + e.getMessage() +".";
-            System.err.println(errorMsg);
-            fail(errorMsg);
-        }
-    }
-
-    private String getRandomKey() {
-        String chars = "abcdefghijklmnopqrstuvwxyz-_#=+ABCDEFJHIJKLMNOPQRSTUVWXYZ";
-        int mode = chars.length();
-        int keyLength = 30;
-        Random random = new Random();
-        StringBuilder buffer = new StringBuilder();
-        int index = 0;
-        for (int i = 0; i < keyLength; i++) {
-            index = Math.abs(random.nextInt()) % mode;
-            buffer.append(chars.charAt(index));
-        }
-        return buffer.toString();
-    }
 }
