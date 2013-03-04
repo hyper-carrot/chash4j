@@ -1,17 +1,13 @@
 package chash4j;
 
-import chash4j.CHashException;
-import chash4j.HashRingStatus;
-import chash4j.NodeCheckMethod;
-
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.Map.Entry;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.Callable;
 
 public final class SimpleHashRing implements HashRing {
     
@@ -22,8 +18,6 @@ public final class SimpleHashRing implements HashRing {
     private ConcurrentHashMap<String, long[]> targetMap = null;
 
     private ConcurrentHashMap<String, long[]> invalidTargetMap = null;
-
-    private Lock lock = null;
 
     private HashRingStatus status = HashRingStatus.UNINITIALIZED;
 
@@ -41,7 +35,6 @@ public final class SimpleHashRing implements HashRing {
         this.nodeMap = new ConcurrentSkipListMap<Long, String>();
         this.targetMap = new ConcurrentHashMap<String, long[]>();
         this.invalidTargetMap = new ConcurrentHashMap<String, long[]>();
-        this.lock = new ReentrantLock();
         this.shadowNumber = DEFAULT_SHADOW_NUMBER;
         this.status = HashRingStatus.INITIALIZED;
     }
@@ -71,10 +64,10 @@ public final class SimpleHashRing implements HashRing {
                 this.nodeMap = null;
                 this.targetMap = null;
                 this.invalidTargetMap = null;
-                this.lock = null;
                 this.shadowNumber = 1;
                 this.stopCheck();
                 this.status = HashRingStatus.DESTROYED;
+                break;
             default:
                 String warningMsg = "The hash ring were not builded. IGNORE the destroy operation.";
                 logger.warn(warningMsg);
@@ -105,17 +98,11 @@ public final class SimpleHashRing implements HashRing {
     }
 
     public boolean stopCheck() throws CHashException {
-        if (this.checker == null) {
-            return false;
-        }
-        return this.checker.stop();
+        return this.checker != null && this.checker.stop();
     }
 
     public boolean inChecking() {
-        if (this.checker == null) {
-            return false;
-        }
-        return this.checker.inChecking();
+        return this.checker != null && this.checker.inChecking();
     }
 
     public boolean addTarget(String target) throws CHashException {
@@ -168,5 +155,36 @@ public final class SimpleHashRing implements HashRing {
             return matchedEntry.getValue();
         }
         return null;
+    }
+
+    public Set<String> getTargets(String key, int number) throws CHashException {
+        long nodeKey = Hash.getHashForKey(key);
+        ConcurrentNavigableMap<Long, String> matchedSubMap = this.nodeMap.tailMap(nodeKey);
+        LinkedHashSet<String> results = new LinkedHashSet<String>();
+        if (matchedSubMap.isEmpty()) {
+            matchedSubMap = this.nodeMap;
+        }
+        if (number <= 0) {
+            number = 1;
+        }
+        int targetNumber = targetMap.size();
+        if (number > targetNumber) {
+            number = targetNumber;
+        }
+        for (Entry<Long, String> matchedEntry : matchedSubMap.entrySet()) {
+            results.add(matchedEntry.getValue());
+            if (results.size() == number) {
+                break;
+            }
+        }
+        if (results.size() < number) {
+            for (Entry<Long, String> entry : this.nodeMap.entrySet()) {
+                results.add(entry.getValue());
+                if (results.size() == number) {
+                    break;
+                }
+            }
+        }
+        return results;
     }
 }
