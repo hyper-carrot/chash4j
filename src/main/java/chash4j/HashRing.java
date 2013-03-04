@@ -1,6 +1,6 @@
 package chash4j;
 
-import java.util.Set;
+import java.util.List;
 
 public interface HashRing {
 
@@ -14,6 +14,6 @@ public interface HashRing {
     boolean addTarget(String target) throws CHashException;
     boolean removeTarget(String target) throws CHashException;
     String getTarget(String key) throws CHashException;
-    Set<String> getTargets(String key, int number) throws CHashException;
+    List<String> getTargets(String key, int number) throws CHashException;
 
 }

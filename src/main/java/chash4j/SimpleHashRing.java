@@ -1,11 +1,10 @@
 package chash4j;
 
 import java.util.HashMap;
-import java.util.LinkedHashSet;
+import java.util.ArrayList;
 import java.util.Map;
-import java.util.Set;
+import java.util.List;
 import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
@@ -145,24 +144,18 @@ public final class SimpleHashRing implements HashRing {
     }
 
     public String getTarget(String key) throws CHashException {
-        long nodeKey = Hash.getHashForKey(key);
-        Entry<Long, String> matchedEntry = this.nodeMap.ceilingEntry(nodeKey);
-        if (matchedEntry != null) {
-            return matchedEntry.getValue();
+        List<String> results = getTargets(key, 1);
+        if (results.isEmpty()) {
+            return null;
+        } else {
+            return results.get(0);
         }
-        matchedEntry = this.nodeMap.firstEntry();
-        if (matchedEntry != null) {
-            return matchedEntry.getValue();
-        }
-        return null;
     }
 
-    public Set<String> getTargets(String key, int number) throws CHashException {
-        long nodeKey = Hash.getHashForKey(key);
-        ConcurrentNavigableMap<Long, String> matchedSubMap = this.nodeMap.tailMap(nodeKey);
-        LinkedHashSet<String> results = new LinkedHashSet<String>();
-        if (matchedSubMap.isEmpty()) {
-            matchedSubMap = this.nodeMap;
+    public List<String> getTargets(String key, int number) throws CHashException {
+        List<String> results = new ArrayList<String>();
+        if (key == null || key.length() == 0) {
+            return results;
         }
         if (number <= 0) {
             number = 1;
@@ -171,19 +164,19 @@ public final class SimpleHashRing implements HashRing {
         if (number > targetNumber) {
             number = targetNumber;
         }
-        for (Entry<Long, String> matchedEntry : matchedSubMap.entrySet()) {
-            results.add(matchedEntry.getValue());
-            if (results.size() == number) {
-                break;
+        long keyHash = Hash.getHashForKey(key);
+        long currentKeyHash = keyHash;
+        String tempTarget = null;
+        while (results.size() < number) {
+            Entry<Long, String> matchedEntry = this.nodeMap.ceilingEntry(currentKeyHash);
+            if (matchedEntry == null) {
+                matchedEntry = this.nodeMap.firstEntry();
             }
-        }
-        if (results.size() < number) {
-            for (Entry<Long, String> entry : this.nodeMap.entrySet()) {
-                results.add(entry.getValue());
-                if (results.size() == number) {
-                    break;
-                }
+            tempTarget = matchedEntry.getValue();
+            if (!results.contains(tempTarget)) {
+                results.add(tempTarget);
             }
+            currentKeyHash = matchedEntry.getKey() + 1;
         }
         return results;
     }
